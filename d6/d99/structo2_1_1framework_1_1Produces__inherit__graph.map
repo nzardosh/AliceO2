@@ -1,0 +1,31 @@
+<map id="o2::framework::Produces&lt; T &gt;" name="o2::framework::Produces&lt; T &gt;">
+<area shape="rect" id="node2" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::ReducedEvents \&gt;\n||}" alt="" coords="5,160,189,252"/>
+<area shape="rect" id="node3" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::EvSels \&gt;\n||}" alt="" coords="213,160,397,252"/>
+<area shape="rect" id="node4" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::SecVtx2Prong \&gt;\n||}" alt="" coords="421,160,605,252"/>
+<area shape="rect" id="node5" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; o2::aod::JetConstituents \&gt;\n||}" alt="" coords="630,160,837,252"/>
+<area shape="rect" id="node6" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::Due \&gt;\n||}" alt="" coords="861,160,1045,252"/>
+<area shape="rect" id="node7" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::Hashes \&gt;\n||}" alt="" coords="1069,160,1253,252"/>
+<area shape="rect" id="node8" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::FooBars \&gt;\n||}" alt="" coords="1277,160,1461,252"/>
+<area shape="rect" id="node9" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::EtaPhiPt \&gt;\n||}" alt="" coords="1485,160,1669,252"/>
+<area shape="rect" id="node10" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::HfTrackIndexProng2 \&gt;\n||}" alt="" coords="1694,160,1909,252"/>
+<area shape="rect" id="node11" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::Tre \&gt;\n||}" alt="" coords="1933,160,2117,252"/>
+<area shape="rect" id="node12" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::Cents \&gt;\n||}" alt="" coords="2141,160,2325,252"/>
+<area shape="rect" id="node13" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::HfCandProng2 \&gt;\n||}" alt="" coords="2349,160,2533,252"/>
+<area shape="rect" id="node14" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::HfTrackIndexProng3 \&gt;\n||}" alt="" coords="2558,160,2773,252"/>
+<area shape="rect" id="node15" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::SelTrack \&gt;\n||}" alt="" coords="2797,160,2981,252"/>
+<area shape="rect" id="node16" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::ReducedTracksBarrel \&gt;\n||}" alt="" coords="3005,160,3224,252"/>
+<area shape="rect" id="node17" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::ReducedTracks \&gt;\n||}" alt="" coords="3248,160,3432,252"/>
+<area shape="rect" id="node18" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::ReducedTracksBarrelCov \&gt;\n||}" alt="" coords="3457,160,3701,252"/>
+<area shape="rect" id="node19" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::Uno \&gt;\n||}" alt="" coords="3725,160,3909,252"/>
+<area shape="rect" id="node20" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::Cand2Prong \&gt;\n||}" alt="" coords="3933,160,4117,252"/>
+<area shape="rect" id="node21" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::TracksExtended \&gt;\n||}" alt="" coords="4141,160,4328,252"/>
+<area shape="rect" id="node22" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::CollisionsExtra \&gt;\n||}" alt="" coords="4352,160,4536,252"/>
+<area shape="rect" id="node23" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::ReducedEventsVtxCov \&gt;\n||}" alt="" coords="4561,160,4791,252"/>
+<area shape="rect" id="node24" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::TrackSelection \&gt;\n||}" alt="" coords="4816,160,5000,252"/>
+<area shape="rect" id="node25" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::Timestamps \&gt;\n||}" alt="" coords="5024,160,5208,252"/>
+<area shape="rect" id="node26" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::EtaPhis \&gt;\n||}" alt="" coords="5232,160,5416,252"/>
+<area shape="rect" id="node27" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; o2::aod::Jets \&gt;\n||}" alt="" coords="5440,160,5624,252"/>
+<area shape="rect" id="node28" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::ReducedEventsExtended \&gt;\n||}" alt="" coords="5649,160,5893,252"/>
+<area shape="rect" id="node29" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::Mults \&gt;\n||}" alt="" coords="5917,160,6101,252"/>
+<area shape="rect" id="node30" href="$d6/d86/structo2_1_1framework_1_1Produces.html" title="{o2::framework::Produces\l\&lt; aod::EtaPhi \&gt;\n||}" alt="" coords="6125,160,6309,252"/>
+</map>

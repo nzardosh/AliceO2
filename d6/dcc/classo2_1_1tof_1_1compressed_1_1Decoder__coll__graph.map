@@ -1,0 +1,13 @@
+<map id="o2::tof::compressed::Decoder" name="o2::tof::compressed::Decoder">
+<area shape="rect" id="node2" href="$db/d26/classo2_1_1tof_1_1WindowFiller.html" title="{o2::tof::WindowFiller\n||+ WindowFiller()\l+ ~WindowFiller()\l+ initObj()\l+ reset()\l+ getCurrentReadoutWindow()\l+ setCurrentReadoutWindow()\l+ setEventTime()\l+ getDigitPerTimeFrame()\l+ getReadoutWindowData()\l+ fillOutputContainer()\l+ flushOutputContainer()\l+ setContinuous()\l+ isContinuous()\l+ resizeVectorFutureDigit()\l# fillDigitsInStrip()\l# checkIfReuseFutureDigits()\l# checkIfReuseFutureDigitsRO()\l# insertDigitInFuture()\l# isMergable()\l# ClassDefNV()\l}" alt="" coords="742,608,973,964"/>
+<area shape="rect" id="node12" href="$d5/d06/structo2_1_1header_1_1RAWDataHeaderV6.html" title="{o2::header::RAWDataHeaderV6\n|+ zero0\l+ word1\l+ word2\l+ word3\l+ word4\l+ pageCnt\l+ stop\l+ zero4\l+ word5\l+ word6\l+ detectorField\l|}" alt="" coords="1481,292,1703,516"/>
+<area shape="rect" id="node13" href="$d6/d30/classuint64__t.html" title="{uint64_t\n||}" alt="" coords="1119,5,1193,83"/>
+<area shape="rect" id="node19" href="$d3/d87/classuint32__t.html" title="{uint32_t\n||}" alt="" coords="2211,5,2285,83"/>
+<area shape="rect" id="node25" href="$df/dd7/uniono2_1_1tof_1_1compressed_1_1Union__t.html" title="{o2::tof::compressed\l::Union_t\n||}" alt="" coords="2222,740,2373,832"/>
+<area shape="rect" id="node26" href="$df/d87/structo2_1_1tof_1_1compressed_1_1PackedHit__t.html" title="{o2::tof::compressed\l::PackedHit_t\n||}" alt="" coords="1873,358,2023,450"/>
+<area shape="rect" id="node27" href="$dc/d31/structo2_1_1tof_1_1compressed_1_1CrateTrailer__t.html" title="{o2::tof::compressed\l::CrateTrailer_t\n||}" alt="" coords="2047,358,2198,450"/>
+<area shape="rect" id="node28" href="$d0/df7/structo2_1_1tof_1_1compressed_1_1CrateOrbit__t.html" title="{o2::tof::compressed\l::CrateOrbit_t\n||}" alt="" coords="2222,358,2373,450"/>
+<area shape="rect" id="node29" href="$d5/d0d/structo2_1_1tof_1_1compressed_1_1Word__t.html" title="{o2::tof::compressed\l::Word_t\n||}" alt="" coords="2397,358,2547,450"/>
+<area shape="rect" id="node30" href="$df/d7e/structo2_1_1tof_1_1compressed_1_1FrameHeader__t.html" title="{o2::tof::compressed\l::FrameHeader_t\n||}" alt="" coords="2746,358,2897,450"/>
+<area shape="rect" id="node31" href="$d5/da4/structo2_1_1tof_1_1compressed_1_1CrateHeader__t.html" title="{o2::tof::compressed\l::CrateHeader_t\n||}" alt="" coords="2571,358,2722,450"/>
+</map>
