@@ -18,6 +18,7 @@
 #include "Framework/AnalysisTask.h"
 #include "DetectorsVertexing/DCAFitterN.h"
 #include "Analysis/SecondaryVertexHF.h"
+#include "Analysis/SecondaryVertexHFML.h"
 #include "Analysis/trackUtilities.h"
 #include "ReconstructionDataFormats/DCA.h"
 #include "Analysis/RecoDecay.h"
@@ -33,6 +34,7 @@ using std::array;
 /// Reconstruction of heavy-flavour 2-prong decay candidates
 struct HFCandidateCreator2Prong {
   Produces<aod::HfCandBase> rowCandidateBase;
+  Produces<aod::VertexHFML> secondaryVertexHFML;
   //Produces<aod::HfCandProng2Base> rowCandidateProng2Base; // TODO split table
   Configurable<double> magneticField{"d_bz", 5.0, "magnetic field"};
   Configurable<bool> b_propdca{"b_propdca", true, "create tracks version propagated to PCA"};
@@ -41,6 +43,7 @@ struct HFCandidateCreator2Prong {
   Configurable<double> d_minparamchange{"d_minparamchange", 1.e-3, "stop iterations if largest change of any X is smaller than this"};
   Configurable<double> d_minrelchi2change{"d_minrelchi2change", 0.9, "stop iterations is chi2/chi2old > this"};
   Configurable<bool> b_dovalplots{"b_dovalplots", true, "do validation plots"};
+  Configurable<bool> b_doSecondaryVertexHFML{"b_doSecondaryVertexHFML", false, "make secondary vertex hf ml table"};
   OutputObj<TH1F> hmass2{TH1F("hmass2", "2-track inv mass", 500, 0., 5.0)};
 
   double massPi = RecoDecay::getMassPDG(kPiPlus);
@@ -113,7 +116,58 @@ struct HFCandidateCreator2Prong {
                        impactParameter0.getY(), impactParameter1.getY(),
                        std::sqrt(impactParameter0.getSigmaY2()), std::sqrt(impactParameter1.getSigmaY2()),
                        rowTrackIndexProng2.index0Id(), rowTrackIndexProng2.index1Id());
-
+      if (b_doSecondaryVertexHFML) {
+        auto track1 = rowTrackIndexProng2.index0();
+        auto track2 = rowTrackIndexProng2.index1();
+        //auto trackParVarCov1 = getTrackParCov(trackParVar0);
+        //auto trackParVarCov2 = getTrackParCov(trackParVar1);
+        secondaryVertexHFML(track1.collisionId(),
+                            track1.x(), track1.alpha(),
+                            track1.y(), track1.z(), track1.snp(), track1.tgl(), track1.signed1Pt(),
+                            track1.phi(), track1.eta(),
+                            std::sqrt(trackParVarPos1.getSigmaY2()), std::sqrt(trackParVarPos1.getSigmaZ2()), std::sqrt(trackParVarPos1.getSigmaSnp2()),
+                            std::sqrt(trackParVarPos1.getSigmaTgl2()), std::sqrt(trackParVarPos1.getSigma1Pt2()),
+                            trackParVarPos1.getSigmaZY(),
+                            trackParVarPos1.getSigmaSnpY(), trackParVarPos1.getSigmaSnpZ(),
+                            trackParVarPos1.getSigmaTglY(), trackParVarPos1.getSigmaTglZ(), trackParVarPos1.getSigmaTglSnp(),
+                            trackParVarPos1.getSigma1PtY(), trackParVarPos1.getSigma1PtZ(), trackParVarPos1.getSigma1PtSnp(), trackParVarPos1.getSigma1PtTgl(),
+                            track2.x(), track2.alpha(),
+                            track2.y(), track2.z(), track2.snp(), track2.tgl(), track2.signed1Pt(),
+                            track2.phi(), track2.eta(),
+                            std::sqrt(trackParVarNeg1.getSigmaY2()), std::sqrt(trackParVarNeg1.getSigmaZ2()), std::sqrt(trackParVarNeg1.getSigmaSnp2()),
+                            std::sqrt(trackParVarNeg1.getSigmaTgl2()), std::sqrt(trackParVarNeg1.getSigma1Pt2()),
+                            trackParVarNeg1.getSigmaZY(),
+                            trackParVarNeg1.getSigmaSnpY(), trackParVarNeg1.getSigmaSnpZ(),
+                            trackParVarNeg1.getSigmaTglY(), trackParVarNeg1.getSigmaTglZ(), trackParVarNeg1.getSigmaTglSnp(),
+                            trackParVarNeg1.getSigma1PtY(), trackParVarNeg1.getSigma1PtZ(), trackParVarNeg1.getSigma1PtSnp(), trackParVarNeg1.getSigma1PtTgl(),
+                            secondaryVertex[0], secondaryVertex[1], secondaryVertex[2],
+                            errorDecayLength, chi2PCA,
+                            impactParameter0.getY(), impactParameter0.getZ(),
+                            std::sqrt(impactParameter0.getSigmaY2()), std::sqrt(impactParameter0.getSigmaZ2()),
+                            impactParameter0.getSigmaYZ(),
+                            impactParameter1.getY(), impactParameter1.getZ(),
+                            std::sqrt(impactParameter1.getSigmaY2()), std::sqrt(impactParameter1.getSigmaZ2()),
+                            impactParameter1.getSigmaYZ(),
+                            trackParVar0.getX(), trackParVar0.getAlpha(),
+                            trackParVar0.getY(), trackParVar0.getZ(), trackParVar0.getSnp(), trackParVar0.getTgl(), trackParVar0.getQ2Pt(), //is this correct?
+                            trackParVar0.getPhi(), trackParVar0.getEta(),
+                            //std::sqrt(trackParVarCov1.getSigmaY2()),std::sqrt(trackParVarCov1.getSigmaZ2()),std::sqrt(trackParVarCov1.getSigmaSnp2()),
+                            //std::sqrt(trackParVarCov1.getSigmaTgl2()),std::sqrt(trackParVarCov1.getSigma1Pt2()),
+                            //trackParVarCov1.getSigmaZY(),
+                            //trackParVarCov1.getSigmaSnpY(),trackParVarCov1.getSigmaSnpZ(),
+                            //trackParVarCov1.getSigmaTglY(),trackParVarCov1.getSigmaTglZ(),trackParVarCov1.getSigmaTglSnp(),
+                            //trackParVarCov1.getSigma1PtY(), trackParVarCov1.getSigma1PtZ(), trackParVarCov1.getSigma1PtSnp(),trackParVarCov1.getSigma1PtTgl(),
+                            trackParVar1.getX(), trackParVar1.getAlpha(),
+                            trackParVar1.getY(), trackParVar1.getZ(), trackParVar1.getSnp(), trackParVar1.getTgl(), trackParVar1.getQ2Pt(), //is this correct?
+                            trackParVar1.getPhi(), trackParVar1.getEta()                                                                    //,
+                            //std::sqrt(trackParVarCov2.getSigmaY2()),std::sqrt(trackParVarCov2.getSigmaZ2()),std::sqrt(trackParVarCov2.getSigmaSnp2()),
+                            //std::sqrt(trackParVarCov2.getSigmaTgl2()),std::sqrt(trackParVarCov2.getSigma1Pt2()),
+                            //trackParVarCov2.getSigmaZY(),
+                            //trackParVarCov2.getSigmaSnpY(),trackParVarCov2.getSigmaSnpZ(),
+                            //trackParVarCov2.getSigmaTglY(),trackParVarCov2.getSigmaTglZ(),trackParVarCov2.getSigmaTglSnp(),
+                            //trackParVarCov2.getSigma1PtY(), trackParVarCov2.getSigma1PtZ(), trackParVarCov2.getSigma1PtSnp(),trackParVarCov2.getSigma1PtTgl()
+        );
+      }
       // fill histograms
       if (b_dovalplots) {
         hmass2->Fill(massPiK);
