@@ -89,14 +89,15 @@ class SimTraits
       /*ACO*/ VS{ "ACOHit" }
 #ifdef ENABLE_UPGRADES
       ,
-      /*IT3*/ VS{ "ITS3Hit" }
+      /*IT3*/ VS{ "IT3Hit" },
+      /*TRK*/ VS{ "TRKHit" }
 #endif
     };
   // clang-format on
 
   // branches that are related to kinematics and general event information
   static inline const std::vector<std::string> KINEMATICSBRANCHES =
-    {"MCTrack", "MCEventHeader", "TrackRefs", "IndexedTrackRefs"};
+    {"MCTrack", "MCEventHeader", "TrackRefs"};
 
   ClassDefNV(SimTraits, 1);
 };
@@ -224,6 +225,11 @@ struct DetIDToHitTypes<o2::detectors::DetID::TPC> {
 #ifdef ENABLE_UPGRADES
 template <>
 struct DetIDToHitTypes<o2::detectors::DetID::IT3> {
+  using HitType = o2::itsmft::Hit;
+};
+
+template <>
+struct DetIDToHitTypes<o2::detectors::DetID::TRK> {
   using HitType = o2::itsmft::Hit;
 };
 #endif

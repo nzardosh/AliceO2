@@ -30,11 +30,13 @@
 #include <functional>
 #include <gsl/gsl>
 #include "GPUSettings.h"
-#include "GPUDisplayConfig.h"
-#include "GPUQAConfig.h"
 #include "GPUDataTypes.h"
 #include "GPUHostDataTypes.h"
 #include "DataFormatsTPC/Constants.h"
+
+class TH1F;
+class TH1D;
+class TH2F;
 
 namespace o2
 {
@@ -46,6 +48,7 @@ class Digit;
 namespace gpu
 {
 class TPCFastTransform;
+struct GPUSettingsO2;
 
 // This defines an output region. Ptr points to a memory buffer, which should have a proper alignment.
 // Since DPL does not respect the alignment of data types, we do not impose anything specic but just use a char data type, but it should be >= 64 bytes ideally.
@@ -58,10 +61,18 @@ struct GPUInterfaceOutputRegion {
   std::function<void*(size_t)> allocator = nullptr;
 };
 
+struct GPUInterfaceQAOutputs {
+  const std::vector<TH1F>* hist1;
+  const std::vector<TH2F>* hist2;
+  const std::vector<TH1D>* hist3;
+};
+
 struct GPUInterfaceOutputs {
   GPUInterfaceOutputRegion compressedClusters;
   GPUInterfaceOutputRegion clustersNative;
   GPUInterfaceOutputRegion tpcTracks;
+  GPUInterfaceOutputRegion clusterLabels;
+  GPUInterfaceQAOutputs qa;
 };
 
 // Full configuration structure with all available settings of GPU...
@@ -74,21 +85,26 @@ struct GPUO2InterfaceConfiguration {
   struct GPUInterfaceSettings {
     int dumpEvents = 0;
     bool outputToExternalBuffers = false;
-    // These constants affect GPU memory allocation and do not limit the CPU processing
+    bool dropSecondaryLegs = true;
+    float memoryBufferScaleFactor = 1.f;
+    // These constants affect GPU memory allocation only and do not limit the CPU processing
+    unsigned long maxTPCZS = 8192ul * 1024 * 1024;
     unsigned int maxTPCHits = 1024 * 1024 * 1024;
     unsigned int maxTRDTracklets = 128 * 1024;
     unsigned int maxITSTracks = 96 * 1024;
   };
 
+  GPUSettingsDeviceBackend configDeviceBackend;
   GPUSettingsProcessing configProcessing;
-  GPUSettingsDeviceProcessing configDeviceProcessing;
   GPUSettingsEvent configEvent;
   GPUSettingsRec configReconstruction;
-  GPUDisplayConfig configDisplay;
-  GPUQAConfig configQA;
+  GPUSettingsDisplay configDisplay;
+  GPUSettingsQA configQA;
   GPUInterfaceSettings configInterface;
   GPURecoStepConfiguration configWorkflow;
   GPUCalibObjects configCalib;
+
+  GPUSettingsO2 ReadConfigurableParam();
 };
 
 // Structure with pointers to actual data for input and output
@@ -103,14 +119,14 @@ struct GPUO2InterfaceConfiguration {
 struct GPUO2InterfaceIOPtrs {
   // Input: TPC clusters in cluster native format, or digits, or list of ZS pages -  const as it can only be input
   const o2::tpc::ClusterNativeAccess* clusters = nullptr;
-  const std::array<gsl::span<const o2::tpc::Digit>, o2::tpc::Constants::MAXSECTOR>* o2Digits = nullptr;
-  std::array<std::unique_ptr<const o2::dataformats::MCTruthContainer<o2::MCCompLabel>>, o2::tpc::Constants::MAXSECTOR>* o2DigitsMC = nullptr;
+  const std::array<gsl::span<const o2::tpc::Digit>, o2::tpc::constants::MAXSECTOR>* o2Digits = nullptr;
+  std::array<const o2::dataformats::ConstMCTruthContainerView<o2::MCCompLabel>*, o2::tpc::constants::MAXSECTOR>* o2DigitsMC = nullptr;
   const o2::gpu::GPUTrackingInOutZS* tpcZS = nullptr;
 
   // Input / Output for Merged TPC tracks, two ptrs, for the tracks themselves, and for the MC labels.
   std::vector<o2::tpc::TrackTPC>* outputTracks = nullptr;
   std::vector<uint32_t>* outputClusRefs = nullptr;
-  o2::dataformats::MCTruthContainer<o2::MCCompLabel>* outputTracksMCTruth = nullptr;
+  std::vector<o2::MCCompLabel>* outputTracksMCTruth = nullptr;
 
   // Output for entropy-reduced clusters of TPC compression
   const o2::tpc::CompressedClustersFlat* compressedClusters = nullptr;

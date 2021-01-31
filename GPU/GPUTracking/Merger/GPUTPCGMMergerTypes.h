@@ -21,7 +21,7 @@ namespace GPUCA_NAMESPACE
 {
 namespace gpu
 {
-namespace GPUTPCGMMergerTypes
+namespace gputpcgmmergertypes
 {
 
 enum attachTypes { attachAttached = 0x40000000,
@@ -33,10 +33,8 @@ enum attachTypes { attachAttached = 0x40000000,
                    attachFlagMask = 0xFC000000 };
 
 struct InterpolationErrorHit {
-  float posY;
-  float errorY;
-  float posZ;
-  float errorZ;
+  float posY, posZ;
+  GPUCA_MERGER_INTERPOLATION_ERROR_TYPE errorY, errorZ;
 };
 
 struct InterpolationErrors {
@@ -53,7 +51,7 @@ struct GPUTPCGMBorderRange {
   float fMin, fMax;
 };
 
-} // namespace GPUTPCGMMergerTypes
+} // namespace gputpcgmmergertypes
 } // namespace gpu
 } // namespace GPUCA_NAMESPACE
 

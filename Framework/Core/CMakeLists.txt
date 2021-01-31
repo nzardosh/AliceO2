@@ -8,22 +8,17 @@
 # granted to it by virtue of its status as an Intergovernmental Organization or
 # submit itself to any jurisdiction.
 
-if(GLFW_FOUND)
-  set(GUI_SOURCES src/FrameworkGUIDebugger.cxx src/FrameworkGUIDevicesGraph.cxx
-                  src/FrameworkGUIDeviceInspector.cxx
-                  src/FrameworkGUIDataRelayerUsage.cxx src/PaletteHelpers.cxx)
-else()
-  set(GUI_SOURCES src/FrameworkDummyDebugger.cxx)
-endif()
-if (TARGET AliceO2::DebugGUI)
-  set(DEBUGGUI_TARGET AliceO2::DebugGUI)
-endif()
+# Given GCC 7.3 does not provide std::filesystem we use Boost instead
+# Drop this once we move to GCC 8.2+
+# if (NOT __APPLE__)
+  set(BOOST_FILESYSTEM Boost::filesystem)
+# endif()
 
 o2_add_library(Framework
                SOURCES src/AODReaderHelpers.cxx
                        src/ASoA.cxx
-                       ${GUI_SOURCES}
                        src/AnalysisHelpers.cxx
+                       src/AnalysisDataModelHelpers.cxx
                        src/BoostOptionsRetriever.cxx
                        src/ChannelConfigurationPolicy.cxx
                        src/ChannelMatching.cxx
@@ -31,6 +26,7 @@ o2_add_library(Framework
                        src/ChannelSpecHelpers.cxx
                        src/CommonDataProcessors.cxx
                        src/CommonServices.cxx
+                       src/CommonMessageBackends.cxx
                        src/CompletionPolicy.cxx
                        src/CompletionPolicyHelpers.cxx
                        src/ComputingResourceHelpers.cxx
@@ -49,22 +45,11 @@ o2_add_library(Framework
                        src/DataProcessor.cxx
                        src/DataRelayer.cxx
                        src/DataRelayerHelpers.cxx
-                       src/DataSampling.cxx
-                       src/DataSamplingConditionFactory.cxx
-                       src/DataSamplingHeader.cxx
-                       src/DataSamplingConditionCustom.cxx
-                       src/DataSamplingConditionNConsecutive.cxx
-                       src/DataSamplingConditionPayloadSize.cxx
-                       src/DataSamplingConditionRandom.cxx
-                       src/DataSamplingHeader.cxx
-                       src/DataSamplingPolicy.cxx
-                       src/DataSamplingReadoutAdapter.cxx
                        src/DataSpecUtils.cxx
                        src/DeviceConfigInfo.cxx
                        src/DeviceMetricsInfo.cxx
                        src/DeviceSpec.cxx
                        src/DeviceSpecHelpers.cxx
-                       src/Dispatcher.cxx
                        src/DriverControl.cxx
                        src/DriverInfo.cxx
                        src/Expressions.cxx
@@ -77,7 +62,6 @@ o2_add_library(Framework
                        src/InputRecord.cxx
                        src/InputSpec.cxx
                        src/OutputSpec.cxx
-                       src/Kernels.cxx
                        src/LifetimeHelpers.cxx
                        src/LocalRootFileService.cxx
                        src/RootConfigParamHelpers.cxx
@@ -90,7 +74,10 @@ o2_add_library(Framework
                        src/PropertyTreeHelpers.cxx
                        src/RCombinedDS.cxx
                        src/ReadoutAdapter.cxx
+                       src/ResourcesMonitoringHelper.cxx
+                       src/ServiceRegistry.cxx
                        src/SimpleResourceManager.cxx
+                       src/SimpleRawDeviceService.cxx
                        src/StreamOperators.cxx
                        src/TMessageSerializer.cxx
                        src/TableBuilder.cxx
@@ -101,15 +88,17 @@ o2_add_library(Framework
                        src/Task.cxx
                        src/TextControlService.cxx
                        src/Variant.cxx
+                       src/WorkflowCustomizationHelpers.cxx
                        src/WorkflowHelpers.cxx
                        src/WorkflowSerializationHelpers.cxx
                        src/WorkflowSpec.cxx
                        src/runDataProcessing.cxx
                        src/ExternalFairMQDeviceProxy.cxx
+                       src/HistogramRegistry.cxx
+                       src/StepTHn.cxx
                        test/TestClasses.cxx
                PRIVATE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/src
-               PUBLIC_LINK_LIBRARIES ${DEBUGGUI_TARGET}
-                                     AliceO2::Common
+               PUBLIC_LINK_LIBRARIES AliceO2::Common
                                      AliceO2::Configuration
                                      AliceO2::InfoLogger
                                      AliceO2::Monitoring
@@ -127,12 +116,14 @@ o2_add_library(Framework
                                      ROOT::ROOTDataFrame
                                      O2::FrameworkLogger
                                      Boost::serialization
+                                     ${BOOST_FILESYSTEM}
                                      arrow::gandiva_shared
                                      LibUV::LibUV
                                      )
 
 o2_target_root_dictionary(Framework
                           HEADERS test/TestClasses.h
+                          include/Framework/StepTHn.h
                           LINKDEF test/FrameworkCoreTestLinkDef.h)
 
 foreach(t
@@ -149,14 +140,10 @@ foreach(t
         ComputingResourceHelpers
         ConfigParamStore
         ConfigParamRegistry
-        ContextRegistry
         DataDescriptorMatcher
         DataProcessorSpec
         DataRefUtils
         DataRelayer
-        DataSamplingCondition
-        DataSamplingHeader
-        DataSamplingPolicy
         DeviceConfigInfo
         DeviceMetricsInfo
         DeviceSpec
@@ -169,6 +156,7 @@ foreach(t
         Graphviz
         GroupSlicer
         HistogramRegistry
+        IndexBuilder
         InfoLogger
         InputRecord
         InputRecordWalker
@@ -204,6 +192,11 @@ foreach(t
               PUBLIC_LINK_LIBRARIES O2::Framework)
 endforeach()
 
+o2_add_executable(dpl-null-sink
+                  SOURCES src/o2NullSink.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework
+                 )
+
 o2_add_executable(dpl-run
                   SOURCES src/dplRun.cxx
                   PUBLIC_LINK_LIBRARIES O2::Framework
@@ -213,17 +206,6 @@ o2_add_executable(verify-aod-file
                   SOURCES src/verifyAODFile.cxx
                   PUBLIC_LINK_LIBRARIES O2::Framework
                   COMPONENT_NAME Framework)
-
-# tests with input data
-
-o2_data_file(COPY test/test_DataSampling.json DESTINATION tests)
-
-o2_add_test(DataSampling NAME test_Framework_test_DataSampling
-            SOURCES test/test_DataSampling.cxx
-            COMPONENT_NAME Framework
-            LABELS framework
-            PUBLIC_LINK_LIBRARIES O2::Framework
-            ENVIRONMENT O2_ROOT=${CMAKE_BINARY_DIR}/stage)
 
 # tests with a name not starting with test_...
 
@@ -243,7 +225,6 @@ o2_add_test(unittest_SimpleOptionsRetriever NAME
 # benchmarks
 
 foreach(b
-        ContextRegistry
         DataDescriptorMatcher
         DataRelayer
         DeviceMetricsInfo
@@ -264,14 +245,6 @@ foreach(b
 endforeach()
 
 # #####################################################@
-
-if (TARGET AliceO2::DebugGUI)
-set (DEBUG_GUI_TESTS_WORKFLOW
-     CustomGUIGL
-     CustomGUISokol
-     SimpleTracksED
-     )
-endif()
 
 foreach(w
         BoostSerializedProcessing
@@ -294,7 +267,6 @@ foreach(w
         SingleDataSource
         Task
         ExternalFairMQDeviceWorkflow
-        ${DEBUG_GUI_TESTS_WORKFLOW}
         )
   o2_add_test(${w} NAME test_Framework_test_${w}
               SOURCES test/test_${w}.cxx
@@ -309,16 +281,6 @@ endforeach()
 # TODO: DanglingInput test not working for the moment [ERROR] Unable to relay
 # part. [WARN] Incoming data is already obsolete, not relaying.
 set_property(TEST test_Framework_test_DanglingInputs PROPERTY DISABLED TRUE)
-
-if (TARGET AliceO2::DebugGUI)
-# TODO: investigate the problem with the two unit tests, maybe setup of the CI
-# environment assertion fired X11: The DISPLAY environment variable is missing
-# glfw-3.2.1/src/window.c:579: glfwGetFramebufferSize: Assertion `window !=
-# ((void *)0)' failed.
-set_property(TEST test_Framework_test_SimpleTracksED PROPERTY DISABLED TRUE)
-set_property(TEST test_Framework_test_CustomGUIGL PROPERTY DISABLED TRUE)
-set_property(TEST test_Framework_test_CustomGUISokol PROPERTY DISABLED TRUE)
-endif()
 
 # TODO: investigate the problem and re-enable
 set_property(TEST test_Framework_test_BoostSerializedProcessing

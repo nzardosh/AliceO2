@@ -18,16 +18,16 @@
 
 // These are basic and non-comprex data types, which will also be visible on the GPU.
 // Please add complex data types required on the host but not GPU to GPUHostDataTypes.h and forward-declare!
-#ifndef __OPENCL__
+#ifndef GPUCA_GPUCODE_DEVICE
 #include <cstddef>
-#endif
 #ifdef GPUCA_NOCOMPAT_ALLOPENCL
 #include <type_traits>
+#endif
 #endif
 #ifdef GPUCA_NOCOMPAT
 #include "GPUTRDDef.h"
 
-class AliHLTTPCClusterMCLabel;
+struct AliHLTTPCClusterMCLabel;
 struct AliHLTTPCRawCluster;
 namespace o2
 {
@@ -36,6 +36,9 @@ namespace tpc
 struct ClusterNativeAccess;
 struct CompressedClustersFlat;
 class Digit;
+namespace constants
+{
+} // namespace constants
 } // namespace tpc
 } // namespace o2
 #endif
@@ -45,16 +48,19 @@ namespace o2
 class MCCompLabel;
 namespace base
 {
+class Propagator;
 class MatLayerCylSet;
 } // namespace base
 namespace trd
 {
-class TRDGeometryFlat;
+class GeometryFlat;
 } // namespace trd
 namespace dataformats
 {
 template <class T>
 class MCTruthContainer;
+template <class T>
+class ConstMCTruthContainerView;
 } // namespace dataformats
 } // namespace o2
 
@@ -64,6 +70,7 @@ namespace gpu
 {
 class TPCFastTransform;
 class TPCdEdxCalibrationSplines;
+struct TPCPadGainCalib;
 } // namespace gpu
 } // namespace GPUCA_NAMESPACE
 
@@ -82,7 +89,7 @@ namespace gpu
 #define GPUCA_RECO_STEP GPUDataTypes
 #endif
 
-#ifdef __OPENCL__
+#if defined(__OPENCL__) && !defined(__OPENCLCPP__)
 MEM_CLASS_PRE() // Macro with some template magic for OpenCL 1.2
 #endif
 class GPUTPCTrack;
@@ -91,7 +98,7 @@ class GPUTPCGMMergedTrack;
 struct GPUTPCGMMergedTrackHit;
 struct GPUTPCGMMergedTrackHitXYZ;
 class GPUTRDTrackletWord;
-class GPUTPCMCInfo;
+struct GPUTPCMCInfo;
 struct GPUTPCClusterData;
 struct GPUTRDTrackletLabels;
 struct GPUTPCDigitsMCInput;
@@ -118,6 +125,7 @@ class GPUDataTypes
                              TPCdEdx = 64,
                              TPCClusterFinding = 128,
                              TPCDecompression = 256,
+                             Refit = 512,
                              AllRecoSteps = 0x7FFFFFFF,
                              NoRecoStep = 0 };
   enum ENUM_CLASS InOutType { TPCClusters = 1,
@@ -129,7 +137,7 @@ class GPUDataTypes
                               TPCRaw = 64 };
 
 #ifdef GPUCA_NOCOMPAT_ALLOPENCL
-  static constexpr const char* const RECO_STEP_NAMES[] = {"TPC Transformation", "TPC Sector Tracking", "TPC Track Merging and Fit", "TPC Compression", "TRD Tracking", "ITS Tracking", "TPC dEdx Computation", "TPC Cluster Finding", "TPC Decompression"};
+  static constexpr const char* const RECO_STEP_NAMES[] = {"TPC Transformation", "TPC Sector Tracking", "TPC Track Merging and Fit", "TPC Compression", "TRD Tracking", "ITS Tracking", "TPC dEdx Computation", "TPC Cluster Finding", "TPC Decompression", "Global Refit"};
   static constexpr const char* const GENERAL_STEP_NAMES[] = {"Prepare", "QA"};
   typedef bitfield<RecoStep, unsigned int> RecoStepField;
   typedef bitfield<InOutType, unsigned int> InOutTypeField;
@@ -166,8 +174,10 @@ template <template <typename T> class S>
 struct GPUCalibObjectsTemplate {
   typename S<TPCFastTransform>::type* fastTransform = nullptr;
   typename S<o2::base::MatLayerCylSet>::type* matLUT = nullptr;
-  typename S<o2::trd::TRDGeometryFlat>::type* trdGeometry = nullptr;
+  typename S<o2::trd::GeometryFlat>::type* trdGeometry = nullptr;
   typename S<TPCdEdxCalibrationSplines>::type* dEdxSplines = nullptr;
+  typename S<TPCPadGainCalib>::type* tpcPadGain = nullptr;
+  typename S<o2::base::Propagator>::type* o2Propagator = nullptr;
 };
 typedef GPUCalibObjectsTemplate<DefaultPtr> GPUCalibObjects;
 typedef GPUCalibObjectsTemplate<ConstPtr> GPUCalibObjectsConst;
@@ -223,6 +233,7 @@ struct GPUTrackingInOutPointers {
   const GPUTPCGMMergedTrackHitXYZ* mergedTrackHitsXYZ = nullptr;
   unsigned int nMergedTrackHits = 0;
   unsigned int* mergedTrackHitAttachment = nullptr;
+  unsigned char* mergedTrackHitStates = nullptr;
   const o2::tpc::CompressedClustersFlat* tpcCompressedClusters = nullptr;
   const GPUTRDTrackletWord* trdTracklets = nullptr;
   unsigned int nTRDTracklets = 0;

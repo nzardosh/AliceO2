@@ -69,7 +69,7 @@ class MatLayerCylSet
 } // namespace base
 namespace trd
 {
-class TRDGeometryFlat
+class GeometryFlat
 {
 };
 } // namespace trd
@@ -79,6 +79,9 @@ namespace GPUCA_NAMESPACE
 {
 namespace gpu
 {
+class TPCCFCalibration
+{
+};
 class TPCdEdxCalibrationSplines
 {
 };
@@ -98,6 +101,11 @@ class GPUTPCCompression
 };
 class GPUTPCClusterFinder
 {
+};
+class GPUTrackingRefitProcessor
+{
+};
+struct GPUTPCCFChainContext {
 };
 #ifndef __OPENCL__
 struct GPUParam;

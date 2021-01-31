@@ -65,7 +65,7 @@ static constexpr char DUMP_HEADER[DUMP_HEADER_SIZE + 1] = "CAv1";
 GPUChainTracking::InOutMemory::InOutMemory() = default;
 GPUChainTracking::InOutMemory::~InOutMemory() = default;
 GPUChainTracking::InOutMemory::InOutMemory(GPUChainTracking::InOutMemory&&) = default;
-GPUChainTracking::InOutMemory& GPUChainTracking::InOutMemory::operator=(GPUChainTracking::InOutMemory&&) = default;
+GPUChainTracking::InOutMemory& GPUChainTracking::InOutMemory::operator=(GPUChainTracking::InOutMemory&&) = default; // NOLINT: False positive in clang-tidy
 
 void GPUChainTracking::DumpData(const char* filename)
 {
@@ -150,19 +150,20 @@ int GPUChainTracking::ReadData(const char* filename)
   ReadData(fp, mIOPtrs.rawClusters, mIOPtrs.nRawClusters, mIOMem.rawClusters, InOutPointerType::RAW_CLUSTERS, ptrRawClusters);
   int nClustersTotal = 0;
 #ifdef HAVE_O2HEADERS
-  if (ReadData<ClusterNative>(fp, &mClusterNativeAccess->clustersLinear, &mClusterNativeAccess->nClustersTotal, &mIOMem.clustersNative, InOutPointerType::CLUSTERS_NATIVE)) {
-    r = fread(&mClusterNativeAccess->nClusters[0][0], sizeof(mClusterNativeAccess->nClusters[0][0]), NSLICES * GPUCA_ROW_COUNT, fp);
-    mClusterNativeAccess->setOffsetPtrs();
-    mIOPtrs.clustersNative = mClusterNativeAccess.get();
+  mIOMem.clusterNativeAccess.reset(new ClusterNativeAccess);
+  if (ReadData<ClusterNative>(fp, &mIOMem.clusterNativeAccess->clustersLinear, &mIOMem.clusterNativeAccess->nClustersTotal, &mIOMem.clustersNative, InOutPointerType::CLUSTERS_NATIVE)) {
+    r = fread(&mIOMem.clusterNativeAccess->nClusters[0][0], sizeof(mIOMem.clusterNativeAccess->nClusters[0][0]), NSLICES * GPUCA_ROW_COUNT, fp);
+    mIOMem.clusterNativeAccess->setOffsetPtrs();
+    mIOPtrs.clustersNative = mIOMem.clusterNativeAccess.get();
   }
-  mDigitMap.reset(new GPUTrackingInOutDigits);
-  if (ReadData(fp, mDigitMap->tpcDigits, mDigitMap->nTPCDigits, mIOMem.tpcDigits, InOutPointerType::TPC_DIGIT)) {
-    mIOPtrs.tpcPackedDigits = mDigitMap.get();
+  mIOMem.digitMap.reset(new GPUTrackingInOutDigits);
+  if (ReadData(fp, mIOMem.digitMap->tpcDigits, mIOMem.digitMap->nTPCDigits, mIOMem.tpcDigits, InOutPointerType::TPC_DIGIT)) {
+    mIOPtrs.tpcPackedDigits = mIOMem.digitMap.get();
   }
   const char* ptr;
   size_t total;
   char* ptrZSPages;
-  if (ReadData(fp, &ptr, &total, &mIOMem.tpcZSpages, InOutPointerType::TPC_ZS, &ptrZSPages)) {
+  if (ReadData(fp, &ptr, &total, &mIOMem.tpcZSpagesChar, InOutPointerType::TPC_ZS, &ptrZSPages)) {
     GPUTrackingInOutZS::GPUTrackingInOutZSCounts counts;
     r = fread(&counts, sizeof(counts), 1, fp);
     mIOMem.tpcZSmeta.reset(new GPUTrackingInOutZS);
@@ -223,7 +224,11 @@ void GPUChainTracking::DumpSettings(const char* dir)
     f += "tpctransform.dump";
     DumpFlatObjectToFile(processors()->calibObjects.fastTransform, f.c_str());
   }
-
+  if (processors()->calibObjects.tpcPadGain != nullptr) {
+    f = dir;
+    f += "tpcpadgaincalib.dump";
+    DumpStructToFile(processors()->calibObjects.tpcPadGain, f.c_str());
+  }
 #ifdef HAVE_O2HEADERS
   if (processors()->calibObjects.dEdxSplines != nullptr) {
     f = dir;
@@ -251,6 +256,10 @@ void GPUChainTracking::ReadSettings(const char* dir)
   f += "tpctransform.dump";
   mTPCFastTransformU = ReadFlatObjectFromFile<TPCFastTransform>(f.c_str());
   processors()->calibObjects.fastTransform = mTPCFastTransformU.get();
+  f = dir;
+  f += "tpcpadgaincalib.dump";
+  mTPCPadGainCalibU = ReadStructFromFile<TPCPadGainCalib>(f.c_str());
+  processors()->calibObjects.tpcPadGain = mTPCPadGainCalibU.get();
 #ifdef HAVE_O2HEADERS
   f = dir;
   f += "dedxsplines.dump";
@@ -262,7 +271,7 @@ void GPUChainTracking::ReadSettings(const char* dir)
   processors()->calibObjects.matLUT = mMatLUTU.get();
   f = dir;
   f += "trdgeometry.dump";
-  mTRDGeometryU = ReadStructFromFile<o2::trd::TRDGeometryFlat>(f.c_str());
+  mTRDGeometryU = ReadStructFromFile<o2::trd::GeometryFlat>(f.c_str());
   processors()->calibObjects.trdGeometry = mTRDGeometryU.get();
 #endif
 }

@@ -46,8 +46,11 @@ Continueous mode  :   for only bunches with data at least in 1 channel.
 #include "DetectorsRaw/HBFUtils.h"
 #include "DetectorsRaw/RawFileWriter.h"
 #include "CommonUtils/StringUtils.h"
+#include "CCDB/CcdbApi.h"
+#include "CCDB/BasicCCDBManager.h"
 #include <Framework/Logger.h>
 #include <TStopwatch.h>
+#include <TSystem.h>
 #include <cassert>
 #include <fstream>
 #include <vector>
@@ -58,6 +61,7 @@ Continueous mode  :   for only bunches with data at least in 1 channel.
 #include <gsl/span>
 
 using namespace o2::ft0;
+using CcdbManager = o2::ccdb::BasicCCDBManager;
 
 ClassImp(Digits2Raw);
 
@@ -72,8 +76,25 @@ void Digits2Raw::readDigits(const std::string& outDir, const std::string& fileDi
 {
   LOG(INFO) << "**********Digits2Raw::convertDigits" << std::endl;
 
-  o2::ft0::LookUpTable lut{o2::ft0::Digits2Raw::linear()};
-  LOG(DEBUG) << " ##### LookUp set ";
+  /*
+  std::string inputDir;
+  const char* aliceO2env = std::getenv("O2_ROOT");
+  if (aliceO2env) {
+    inputDir = aliceO2env;
+  }
+  inputDir += "/share/Detectors/FT0/files/";
+
+  std::string lutPath = inputDir + "FT0ChannelsTable.txt";
+  lutPath = gSystem->ExpandPathName(lutPath.data()); // Expand $(ALICE_ROOT) into real system path
+
+  std::ifstream infile;
+  infile.open(lutPath.c_str());
+  if (!infile.is_open()) {
+    LOG(ERROR) << "!!!! no LUT";
+  }
+  */
+  o2::ft0::LookUpTable lut{o2::ft0::LookUpTable::readTable()};
+  LOG(INFO) << " ##### LookUp set ";
 
   std::string outd = outDir;
   if (outd.back() != '/') {
@@ -114,8 +135,9 @@ void Digits2Raw::readDigits(const std::string& outDir, const std::string& fileDi
       auto& bcd = digitsBC[ibc];
       intRecord = bcd.getIntRecord();
       auto channels = bcd.getBunchChannelData(digitsCh);
-      if (!channels.empty())
+      if (!channels.empty()) {
         convertDigits(bcd, channels, lut, intRecord);
+      }
     }
   }
 }
@@ -136,8 +158,9 @@ void Digits2Raw::convertDigits(o2::ft0::Digit bcdigits,
       if (oldlink >= 0) {
         uint nGBTWords = uint((nchannels + 1) / 2);
         LOG(DEBUG) << " oldlink " << oldlink << " nGBTWords " << nGBTWords;
-        if ((nchannels % 2) == 1)
+        if ((nchannels % 2) == 1) {
           mRawEventData.mEventData[nchannels] = {};
+        }
         mRawEventData.mEventHeader.nGBTWords = nGBTWords;
         auto data = mRawEventData.to_vector(false);
         mLinkID = uint32_t(oldlink);
@@ -147,32 +170,27 @@ void Digits2Raw::convertDigits(o2::ft0::Digit bcdigits,
       oldlink = nlink;
       mRawEventData.mEventHeader = makeGBTHeader(nlink, intRecord);
       nchannels = 0;
-      //  LOG(INFO) << " switch to new link " << nlink;
+      LOG(DEBUG) << " switch to new link " << nlink;
     }
     auto& newData = mRawEventData.mEventData[nchannels];
     bool isAside = (pmchannels[ich].ChId < 96);
     newData.charge = pmchannels[ich].QTCAmpl;
-
     newData.time = pmchannels[ich].CFDTime;
-    newData.is1TimeLostEvent = 0;
-    newData.is2TimeLostEvent = 0;
-    newData.isADCinGate = 1;
-    newData.isAmpHigh = 0;
-    newData.isDoubleEvent = 0;
-    newData.isEventInTVDC = 1;
-    newData.isTimeInfoLate = 0;
-    newData.isTimeInfoLost = 0;
-    int chain = std::rand() % 2;
-    newData.numberADC = chain ? 1 : 0;
+    newData.generateFlags();
     newData.channelID = lut.getMCP(pmchannels[ich].ChId);
-    //  LOG(INFO) << "packed GBT " << nlink << " channelID   " << (int)newData.channelID << " charge " << newData.charge << " time " << newData.time << " chain " << int(newData.numberADC) << " size " << sizeof(newData);
+    LOG(DEBUG) << "packed GBT " << nlink << " channelID   " << (int)newData.channelID << " charge " << newData.charge << " time " << newData.time << " chain " << int(newData.numberADC) << " size " << sizeof(newData);
     nchannels++;
   }
   // fill mEventData[nchannels] with 0s to flag that this is a dummy data
   uint nGBTWords = uint((nchannels + 1) / 2);
-  if ((nchannels % 2) == 1)
+  if ((nchannels % 2) == 1) {
     mRawEventData.mEventData[nchannels] = {};
+  }
   mRawEventData.mEventHeader.nGBTWords = nGBTWords;
+  auto datalast = mRawEventData.to_vector(false);
+  mLinkID = uint32_t(oldlink);
+  mFeeID = uint64_t(oldlink);
+  mWriter.addData(mFeeID, mCruID, mLinkID, mEndPointID, intRecord, datalast);
   LOG(DEBUG) << " last " << oldlink;
   //TCM
   mRawEventData.mEventHeader = makeGBTHeader(LinkTCM, intRecord); //TCM
@@ -182,10 +200,12 @@ void Digits2Raw::convertDigits(o2::ft0::Digit bcdigits,
 
   float ampA = mTriggers.amplA;
   float ampC = mTriggers.amplC;
-  if (ampA > 131071)
+  if (ampA > 131071) {
     ampA = 131071; //2^17
-  if (ampC > 131071)
+  }
+  if (ampC > 131071) {
     ampC = 131071; //2^17
+  }
   tcmdata.vertex = mTriggers.getVertex();
   tcmdata.orA = mTriggers.getOrA();
   tcmdata.orC = mTriggers.getOrC();
@@ -197,22 +217,21 @@ void Digits2Raw::convertDigits(o2::ft0::Digit bcdigits,
   tcmdata.amplC = ampC;
   tcmdata.timeA = mTriggers.timeA;
   tcmdata.timeC = mTriggers.timeC;
-  if (mVerbosity > 0) {
-    LOG(INFO) << " triggers read "
-              << " time A " << mTriggers.timeA << " time C " << mTriggers.timeC
-              << " amp A " << ampA << " amp C " << ampC
-              << " N A " << int(mTriggers.nChanA) << " N C " << int(mTriggers.nChanC)
-              << " trig "
-              << " ver " << mTriggers.getVertex() << " A " << mTriggers.getOrA() << " C " << mTriggers.getOrC();
+  LOG(DEBUG) << " TCM  triggers read "
+             << " time A " << mTriggers.timeA << " time C " << mTriggers.timeC
+             << " amp A " << ampA << " amp C " << ampC
+             << " N A " << int(mTriggers.nChanA) << " N C " << int(mTriggers.nChanC)
+             << " trig "
+             << " ver " << mTriggers.getVertex() << " A " << mTriggers.getOrA() << " C " << mTriggers.getOrC();
 
-    LOG(INFO) << "TCMdata"
-              << " time A " << tcmdata.timeA << " time C " << tcmdata.timeC
-              << " amp A " << tcmdata.amplA << " amp C " << tcmdata.amplC
-              << " N A " << int(tcmdata.nChanA) << " N C " << int(tcmdata.nChanC)
-              << " trig "
-              << " ver " << tcmdata.vertex << " A " << tcmdata.orA << " C " << tcmdata.orC
-              << " size " << sizeof(tcmdata);
-  }
+  LOG(DEBUG) << "TCMdata"
+             << " time A " << tcmdata.timeA << " time C " << tcmdata.timeC
+             << " amp A " << tcmdata.amplA << " amp C " << tcmdata.amplC
+             << " N A " << int(tcmdata.nChanA) << " N C " << int(tcmdata.nChanC)
+             << " trig "
+             << " ver " << tcmdata.vertex << " A " << tcmdata.orA << " C " << tcmdata.orC
+             << " size " << sizeof(tcmdata);
+
   auto data = mRawEventData.to_vector(1);
   mLinkID = uint32_t(LinkTCM);
   mFeeID = uint64_t(LinkTCM);

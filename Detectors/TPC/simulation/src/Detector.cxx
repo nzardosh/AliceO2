@@ -8,6 +8,7 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
+#include "DetectorsBase/MaterialManager.h"
 #include "TPCSimulation/Detector.h"
 #include "TPCSimulation/Point.h"
 #include "TPCBase/ParameterGas.h"
@@ -200,8 +201,9 @@ Bool_t Detector::ProcessHits(FairVolume* vol)
   //<< fMC->Edep() << ", Nelectrons: "
   //<< numberOfElectrons;
 
-  if (numberOfElectrons <= 0) // Could maybe be smaller than 0 due to the Gamma function
+  if (numberOfElectrons <= 0) { // Could maybe be smaller than 0 due to the Gamma function
     return kFALSE;
+  }
 
   // ADD HIT
   static thread_local int oldTrackId = trackID;
@@ -418,8 +420,9 @@ void Detector::CreateMaterials()
   Int_t cnt = 0;
   for (Int_t i = 0; i < 6; i++) {
     if (comp[i]) {
-      if (cnt)
+      if (cnt) {
         gname += "-";
+      }
       gname += names[i];
       cnt++;
     }
@@ -3076,6 +3079,18 @@ void Detector::defineSensitiveVolumes()
     // set volume sentive
     AddSensitiveVolume(v);
   }
+
+  // Special sensitive volume parameters in case FLUKA is used as transport engine
+  auto vmc = TVirtualMC::GetMC();
+  if (strcmp(vmc->GetName(), "TFluka") == 0) {
+    LOG(INFO) << "Setting special FLUKA parameters for  TPC Driftgas";
+    auto& mgr = o2::base::MaterialManager::Instance();
+    Int_t index = mgr.getMediumID("TPC", kDriftGas2);
+    vmc->Gstpar(index, "PRIMIO_E", 20.77);
+    vmc->Gstpar(index, "PRIMIO_N", 14.35);
+    vmc->Gstpar(index, "LOSS", 14);
+    vmc->Gstpar(index, "STRA", 4);
+  }
 }
 
 Double_t Detector::Gamma(Double_t k)
@@ -3086,12 +3101,13 @@ Double_t Detector::Gamma(Double_t k)
   static thread_local Double_t b1 = 0;
   static thread_local Double_t b2 = 0;
   if (k > 0) {
-    if (k < 0.4)
+    if (k < 0.4) {
       n = 1. / k;
-    else if (k >= 0.4 && k < 4)
+    } else if (k >= 0.4 && k < 4) {
       n = 1. / k + (k - 0.4) / k / 3.6;
-    else if (k >= 4.)
+    } else if (k >= 4.) {
       n = 1. / TMath::Sqrt(k);
+    }
     b1 = k - 1. / n;
     b2 = k + 1. / n;
     c1 = (k < 0.4) ? 0 : b1 * (TMath::Log(b1) - 1.) / 2.;
@@ -3105,11 +3121,13 @@ Double_t Detector::Gamma(Double_t k)
     Double_t w1 = c1 + TMath::Log(nu1);
     Double_t w2 = c2 + TMath::Log(nu2);
     y = n * (b1 * w2 - b2 * w1);
-    if (y < 0)
+    if (y < 0) {
       continue;
+    }
     x = n * (w2 - w1);
-    if (TMath::Log(y) >= x)
+    if (TMath::Log(y) >= x) {
       break;
+    }
   }
   return TMath::Exp(x);
 }

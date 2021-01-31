@@ -13,16 +13,15 @@
 #include "Framework/ChannelConfigurationPolicy.h"
 #include "Framework/CompletionPolicy.h"
 #include "Framework/DispatchPolicy.h"
-#include "Framework/ConfigParamsHelper.h"
 #include "Framework/DataProcessorSpec.h"
+#include "Framework/DataAllocator.h"
 #include "Framework/WorkflowSpec.h"
 #include "Framework/ConfigContext.h"
 #include "Framework/BoostOptionsRetriever.h"
 #include "Framework/CustomWorkflowTerminationHook.h"
 #include "Framework/CommonServices.h"
-
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
+#include "Framework/WorkflowCustomizationHelpers.h"
+#include "Framework/Logger.h"
 
 #include <unistd.h>
 #include <vector>
@@ -77,6 +76,9 @@ void defaultConfiguration(std::vector<o2::framework::ServiceSpec>& services)
   services = o2::framework::CommonServices::defaultServices();
 }
 
+/// Workflow options which are required by DPL in order to work.
+std::vector<o2::framework::ConfigParamSpec> requiredWorkflowOptions();
+
 void defaultConfiguration(o2::framework::OnWorkflowTerminationHook& hook)
 {
   hook = [](const char*) {};
@@ -104,6 +106,12 @@ class ConfigContext;
 /// Helper used to customize a workflow pipelining options
 void overridePipeline(o2::framework::ConfigContext& ctx, std::vector<o2::framework::DataProcessorSpec>& workflow);
 
+/// Helper used to customize a workflow via a template data processor
+void overrideCloning(o2::framework::ConfigContext& ctx, std::vector<o2::framework::DataProcessorSpec>& workflow);
+
+/// Helper used to customize the workflow via a global suffix.
+void overrideSuffix(o2::framework::ConfigContext& ctx, std::vector<o2::framework::DataProcessorSpec>& workflow);
+
 // This comes from the framework itself. This way we avoid code duplication.
 int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& specs,
            std::vector<o2::framework::ChannelConfigurationPolicy> const& channelPolicies,
@@ -127,12 +135,8 @@ int main(int argc, char** argv)
     // The default policy is a catch all pub/sub setup to be consistent with the past.
     std::vector<o2::framework::ConfigParamSpec> workflowOptions;
     UserCustomizationsHelper::userDefinedCustomization(workflowOptions, 0);
-    workflowOptions.push_back(ConfigParamSpec{"readers", VariantType::Int64, 1ll, {"number of parallel readers to use"}});
-    workflowOptions.push_back(ConfigParamSpec{"pipeline", VariantType::String, "", {"override default pipeline size"}});
-    std::vector<ChannelConfigurationPolicy> channelPolicies;
-    UserCustomizationsHelper::userDefinedCustomization(channelPolicies, 0);
-    auto defaultChannelPolicies = ChannelConfigurationPolicy::createDefaultPolicies();
-    channelPolicies.insert(std::end(channelPolicies), std::begin(defaultChannelPolicies), std::end(defaultChannelPolicies));
+    auto requiredWorkflowOptions = WorkflowCustomizationHelpers::requiredWorkflowOptions();
+    workflowOptions.insert(std::end(workflowOptions), std::begin(requiredWorkflowOptions), std::end(requiredWorkflowOptions));
 
     std::vector<CompletionPolicy> completionPolicies;
     UserCustomizationsHelper::userDefinedCustomization(completionPolicies, 0);
@@ -153,10 +157,16 @@ int main(int argc, char** argv)
     ConfigParamRegistry workflowOptionsRegistry(std::move(workflowOptionsStore));
     ConfigContext configContext(workflowOptionsRegistry, argc, argv);
     o2::framework::WorkflowSpec specs = defineDataProcessing(configContext);
+    overrideCloning(configContext, specs);
+    overrideSuffix(configContext, specs);
     overridePipeline(configContext, specs);
     for (auto& spec : specs) {
       UserCustomizationsHelper::userDefinedCustomization(spec.requiredServices, 0);
     }
+    std::vector<ChannelConfigurationPolicy> channelPolicies;
+    UserCustomizationsHelper::userDefinedCustomization(channelPolicies, 0);
+    auto defaultChannelPolicies = ChannelConfigurationPolicy::createDefaultPolicies(configContext);
+    channelPolicies.insert(std::end(channelPolicies), std::begin(defaultChannelPolicies), std::end(defaultChannelPolicies));
     result = doMain(argc, argv, specs, channelPolicies, completionPolicies, dispatchPolicies, workflowOptions, configContext);
   } catch (boost::exception& e) {
     doBoostException(e);

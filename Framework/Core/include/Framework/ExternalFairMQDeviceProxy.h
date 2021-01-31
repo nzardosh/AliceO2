@@ -21,9 +21,10 @@ namespace o2
 {
 namespace framework
 {
+
 /// A callback function to retrieve the FairMQChannel name to be used for sending
 /// messages of the specified OutputSpec
-using ChannelRetriever = std::function<std::string(OutputSpec const&)>;
+using ChannelRetriever = std::function<std::string(OutputSpec const&, DataProcessingHeader::StartTime)>;
 using InjectorFunction = std::function<void(FairMQDevice& device, FairMQParts& inputs, ChannelRetriever)>;
 
 struct InputChannelSpec;
@@ -67,7 +68,7 @@ static auto gDefaultConverter = incrementalConverter(OutputSpec{"TST", "TEST", 0
 
 /// Create a DataProcessorSpec which can be used to inject
 /// messages in the DPL.
-/// @param label is the label of the DataProcessorSpec associated.
+/// @param label is the label of the DataProcessorSpec associated and name of the input channel.
 /// @param outputs is the type of messages which this source produces.
 /// @param channelConfig is string to be passed to fairmq to create the device.
 ///        notice that the name of the device will be added as the name of the channel if the

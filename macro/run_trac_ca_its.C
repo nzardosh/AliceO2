@@ -60,16 +60,16 @@ void run_trac_ca_its(std::string path = "./",
                      std::string inputGRP = "o2sim_grp.root")
 {
 
-  gSystem->Load("libO2ITStracking.so");
+  gSystem->Load("libO2ITStracking");
 
   //std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance());
-  std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance("CUDA", true)); // for GPU with CUDA
-  auto* chainITS = rec->AddChain<GPUChainITS>();
-  rec->Init();
+  // std::unique_ptr<GPUReconstruction> rec(GPUReconstruction::CreateInstance("CUDA", true)); // for GPU with CUDA
+  // auto* chainITS = rec->AddChain<GPUChainITS>();
+  // rec->Init();
 
-  o2::its::Tracker tracker(chainITS->GetITSTrackerTraits());
-  //o2::its::Tracker tracker(new o2::its::TrackerTraitsCPU());
-  o2::its::ROframe event(0);
+  // o2::its::Tracker tracker(chainITS->GetITSTrackerTraits());
+  o2::its::Tracker tracker(new o2::its::TrackerTraitsCPU());
+  o2::its::ROframe event(0, 7);
 
   if (path.back() != '/') {
     path += '/';
@@ -98,9 +98,8 @@ void run_trac_ca_its(std::string path = "./",
   LOG(INFO) << "ITS is in " << (isContITS ? "CONTINUOS" : "TRIGGERED") << " readout mode";
 
   auto gman = o2::its::GeometryTGeo::Instance();
-  gman->fillMatrixCache(o2::utils::bit2Mask(o2::TransformType::T2L, o2::TransformType::T2GRot,
-                                            o2::TransformType::L2G)); // request cached transforms
-
+  gman->fillMatrixCache(o2::math_utils::bit2Mask(o2::math_utils::TransformType::T2L, o2::math_utils::TransformType::T2GRot,
+                                                 o2::math_utils::TransformType::L2G)); // request cached transforms
 
   //>>>---------- attach input data --------------->>>
   TChain itsClusters("o2sim");
@@ -165,7 +164,7 @@ void run_trac_ca_its(std::string path = "./",
   std::vector<o2::itsmft::ROFRecord> vertROFvec, *vertROFvecPtr = &vertROFvec;
   std::vector<Vertex> vertices, *verticesPtr = &vertices;
 
-  MCLabCont trackLabels, *trackLabelsPtr = &trackLabels;
+  std::vector<o2::MCCompLabel> trackLabels, *trackLabelsPtr = &trackLabels;
   outTree.Branch("ITSTrack", &tracksITSPtr);
   outTree.Branch("ITSTrackClusIdx", &trackClIdxPtr);
   outTree.Branch("ITSTrackMCTruth", &trackLabelsPtr);

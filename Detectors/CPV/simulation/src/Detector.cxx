@@ -1,4 +1,3 @@
-
 // Copyright CERN and copyright holders of ALICE O2. This software is
 // distributed under the terms of the GNU General Public License v3 (GPL
 // Version 3), copied verbatim in the file "COPYING".
@@ -250,15 +249,15 @@ Bool_t Detector::ProcessHits(FairVolume* v)
     int ixcell = (int)xcell;
     float zc = zcell - izcell - 0.5;
     float xc = xcell - ixcell - 0.5;
-    for (int iz = 1; iz <= cpvparam.mNgamz; iz++) {
+    for (int iz = 0; iz < cpvparam.mNgamz; iz++) {
       int kzg = izcell + iz - nz3;
-      if (kzg <= 0 || kzg > cpvparam.mnCellZ) {
+      if (kzg < 0 || kzg >= cpvparam.mnCellZ) {
         continue;
       }
       float zg = (float)(iz - nz3) - zc;
-      for (int ix = 1; ix <= cpvparam.mNgamx; ix++) {
+      for (int ix = 0; ix < cpvparam.mNgamx; ix++) {
         int kxg = ixcell + ix - nx3;
-        if (kxg <= 0 || kxg > cpvparam.mnCellX) {
+        if (kxg < 0 || kxg >= cpvparam.mnCellX) {
           continue;
         }
         float xg = (float)(ix - nx3) - xc;
@@ -272,7 +271,7 @@ Bool_t Detector::ProcessHits(FairVolume* v)
         // Fill hit with pad response ID and amplitude
         // hist will be sorted and merged later if necessary
         short detID = Geometry::relToAbsId(moduleNumber, kxg, kzg);
-        addHit(partID, detID, Point3D<float>(xyzm[0], xyzm[1], xyzm[2]), time, qpad);
+        addHit(partID, detID, math_utils::Point3D<float>(xyzm[0], xyzm[1], xyzm[2]), time, qpad);
       }
     }
   }
@@ -324,7 +323,7 @@ float Detector::CPVCumulPadResponse(float x, float y)
   return cumulPRF;
 }
 
-void Detector::addHit(int trackID, short detID, const Point3D<float>& pos, double time, float qdep)
+void Detector::addHit(int trackID, short detID, const math_utils::Point3D<float>& pos, double time, float qdep)
 {
   LOG(DEBUG) << "Adding hit for track " << trackID << " in a pad " << detID << " with position (" << pos.X() << ", "
              << pos.Y() << ", " << pos.Z() << "), time" << time << ", qdep =" << qdep << std::endl;

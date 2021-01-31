@@ -21,7 +21,7 @@ if(ALIGPU_BUILD_TYPE STREQUAL "ALIROOT")
 else()
   if(OPENGL_FOUND
      AND GLFW_FOUND
-     AND (ALIGPU_BUILD_TYPE STREQUAL "O2" OR GLEW_FOUND)
+     AND ((ALIGPU_BUILD_TYPE STREQUAL "O2" AND TARGET AliceO2::DebugGUI) OR GLEW_FOUND)
      AND OPENGL_GLU_FOUND
      AND NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(GPUCA_EVENT_DISPLAY ON)
@@ -109,9 +109,8 @@ set(HDRS_INSTALL
     TRDTracking/GPUTRDGeometry.h
     TRDTracking/GPUTRDTrackerDebug.h
     TRDTracking/GPUTRDInterfaces.h
-    Standalone/display/GPUDisplayConfig.h
-    Standalone/qa/GPUQAConfig.h
     Base/GPUConstantMem.h
+    Base/GPUParamRTC.h
     Base/GPUReconstructionKernels.h
     Base/GPUReconstructionIncludesITS.h
     Base/GPUReconstructionHelpers.h
@@ -129,12 +128,17 @@ set(HDRS_INSTALL
     Base/GPUParam.inc
     Merger/GPUTPCGMMergerTypes.h
     Global/GPUErrorCodes.h
+    Standalone/qconfigoptions.h
+    Standalone/qa/GPUQAHelper.h
+    Base/GPUSettingsList.h
+    DataCompression/GPUTPCClusterRejection.h
 )
 
 # Sources only for O2
 if(ALIGPU_BUILD_TYPE STREQUAL "O2")
-  set(SRCS ${SRCS} Interface/GPUO2Interface.cxx)
-  set(HDRS_CINT_O2 ${HDRS_CINT_O2} Interface/GPUO2Interface.h dEdx/TPCdEdxCalibrationSplines.h)
+  set(SRCS ${SRCS} Interface/GPUO2Interface.cxx Interface/GPUO2InterfaceRefit.cxx Interface/GPUO2InterfaceQA.cxx Interface/GPUO2InterfaceConfigurableParam.cxx)
+  set(HDRS_CINT_O2 ${HDRS_CINT_O2} Interface/GPUO2Interface.h Interface/GPUO2InterfaceRefit.h Interface/GPUO2InterfaceQA.h Interface/GPUO2InterfaceConfigurableParam.h dEdx/TPCdEdxCalibrationSplines.h)
+  set(HDRS_CINT_O2_ADDITIONAL Base/GPUSettings.h Base/GPUSettingsList.h TRDTracking/GPUTRDTrack.h) # Manual dependencies for ROOT dictionary generation
 endif()
 
 # Sources for O2 and for Standalone if requested in config file
@@ -159,6 +163,7 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2" OR CONFIG_O2_EXTENSIONS)
         TPCClusterFinder/GPUTPCClusterFinder.cxx
         TPCClusterFinder/ClusterAccumulator.cxx
         TPCClusterFinder/MCLabelAccumulator.cxx
+        TPCClusterFinder/GPUTPCCFCheckPadBaseline.cxx
         TPCClusterFinder/GPUTPCCFStreamCompaction.cxx
         TPCClusterFinder/GPUTPCCFChargeMapFiller.cxx
         TPCClusterFinder/GPUTPCCFPeakFinder.cxx
@@ -168,7 +173,10 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2" OR CONFIG_O2_EXTENSIONS)
         TPCClusterFinder/GPUTPCCFMCLabelFlattener.cxx
         TPCClusterFinder/GPUTPCCFDecodeZS.cxx
         TPCClusterFinder/GPUTPCCFGather.cxx
-        dEdx/TPCdEdxCalibrationSplines.cxx)
+        TPCClusterFinder/TPCPadGainCalib.cxx
+        dEdx/TPCdEdxCalibrationSplines.cxx
+        Refit/GPUTrackingRefit.cxx
+        Refit/GPUTrackingRefitKernel.cxx)
 
     set(SRCS_NO_H ${SRCS_NO_H}
         TPCClusterFinder/GPUTPCClusterFinderDump.cxx)
@@ -229,10 +237,6 @@ else()
   set(HDRS_INSTALL ${HDRS_INSTALL} Standalone/qa/GPUQA.h)
 endif()
 
-if(GPUCA_EVENT_DISPLAY OR GPUCA_QA)
-  set(HDRS_INSTALL ${HDRS_INSTALL} Standalone/qconfigoptions.h)
-endif()
-
 # Update HDR variables with files derrived from SRC variables
 string(REPLACE ".cxx" ".h" HDRS_CINT_ALIROOT "${SRCS}")
 string(REPLACE ".cxx" ".h" HDRS_TMP "${SRCS_NO_CINT}")
@@ -257,6 +261,7 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2")
                                        O2::TPCFastTransformation
                                        O2::DetectorsRaw
                                        ${DEBUGGUI_TARGET}
+                                       O2::Steer
                  PUBLIC_INCLUDE_DIRECTORIES SliceTracker
                                             Base
                                             TPCConvert
@@ -270,6 +275,7 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2")
                                             HLTHeaders
                                             Interface
                                             Merger
+                                            Refit
                                             DataCompression
                                             TPCClusterFinder
                  TARGETVARNAME targetName
@@ -280,7 +286,7 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2")
     PRIVATE $<TARGET_PROPERTY:O2::Framework,INTERFACE_INCLUDE_DIRECTORIES>)
 
   o2_target_root_dictionary(${MODULE}
-                            HEADERS ${HDRS_CINT_O2}
+                            HEADERS ${HDRS_CINT_O2} ${HDRS_CINT_O2_ADDITIONAL}
                             LINKDEF GPUTrackingLinkDef_O2.h)
 
   target_compile_definitions(${targetName} PRIVATE GPUCA_O2_LIB
@@ -324,6 +330,7 @@ if(ALIGPU_BUILD_TYPE STREQUAL "ALIROOT")
                       ${CMAKE_SOURCE_DIR}/GPU/Common
                       ${CMAKE_SOURCE_DIR}/GPU/Utils
                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking
+                      ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/Standalone
                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/Base
                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/SliceTracker
                       ${CMAKE_SOURCE_DIR}/GPU/GPUTracking/Merger
@@ -418,8 +425,8 @@ endif()
 
 if(OpenMP_CXX_FOUND)
   message(STATUS "GPU: Using OpenMP: ${OpenMP_CXX_SPEC_DATE}")
-  target_compile_definitions(${targetName} PRIVATE WITH_OPENMP)
   # Must be private, depending libraries might be compiled by compiler not understanding -fopenmp
+  target_compile_definitions(${targetName} PRIVATE WITH_OPENMP)
   target_link_libraries(${targetName} PRIVATE OpenMP::OpenMP_CXX)
 endif()
 

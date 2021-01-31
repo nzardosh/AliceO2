@@ -19,19 +19,14 @@ Geometry* Geometry::sGeom = nullptr;
 
 Geometry::Geometry(const std::string_view name) : mGeoName(name) {}
 
-// static Geometry* Geometry::GetInstance(const std::string_view name)
-// {
-//     if(sGeom){
-//       if(sGeom->GetName()==name){
-//         return sGeom;
-//       }
-//       else{
-//         delete sGeom ;
-//       }
-//     }
-//     sGeom = new Geometry(name) ;
-//     return sGeom;
-// }
+// module numbering:
+//  start from module 0 (non-existing), 1 (half-module), 2 (bottom),... 4(highest)
+// absId:
+// start from 1 till 5*64*56. Numbering in each module starts at bottom left and first go in z direction:
+//  56   112   3584
+//  ...  ...    ...
+//  1    57 ...3529
+//  relid[3]: (module number[0...4], iphi[1...64], iz[1...56])
 
 short Geometry::relToAbsId(char moduleNumber, int strip, int cell)
 {
@@ -45,7 +40,7 @@ short Geometry::relToAbsId(char moduleNumber, int strip, int cell)
   short row = nStrpZ - (strip - 1) % nStrpZ;
   short col = (int)std::ceil((float)strip / (nStrpZ)) - 1;
 
-  return (moduleNumber - 1) * nCrystalsInModule + row * 2 + (col * nCellsXInStrip + (cell - 1) / 2) * nZ -
+  return moduleNumber * nCrystalsInModule + row * 2 + (col * nCellsXInStrip + (cell - 1) / 2) * nZ -
          (cell & 1 ? 1 : 0);
 }
 
@@ -60,7 +55,7 @@ bool Geometry::absToRelNumbering(short absId, char* relid)
 
   short phosmodulenumber = (absId - 1) / (nZ * nPhi);
 
-  relid[0] = phosmodulenumber + 1;
+  relid[0] = phosmodulenumber;
   absId -= phosmodulenumber * nPhi * nZ;
   relid[1] = 1 + (absId - 1) / nZ;
   relid[2] = absId - (relid[1] - 1) * nZ;
@@ -72,7 +67,7 @@ char Geometry::absIdToModule(short absId)
   const short nZ = 56;
   const short nPhi = 64;
 
-  return 1 + (absId - 1) / (nZ * nPhi);
+  return (absId - 1) / (nZ * nPhi);
 }
 
 int Geometry::areNeighbours(short absId1, short absId2)
@@ -100,14 +95,16 @@ int Geometry::areNeighbours(short absId1, short absId2)
     if ((coldiff <= 1) && (rowdiff <= 1)) { // At least common vertex
       return 1;
     } else {
-      if ((relid2[1] > relid1[1]) && (relid2[2] > relid1[2] + 1))
+      if ((relid2[1] > relid1[1]) && (relid2[2] > relid1[2] + 1)) {
         return 2; //  Difference in row numbers is too large to look further
+      }
     }
     return 0;
 
   } else {
-    if (relid1[0] > relid2[0]) // we switched to the next module
+    if (relid1[0] > relid2[0]) { // we switched to the next module
       return -1;
+    }
     return 2;
   }
   return 0;
@@ -129,9 +126,9 @@ bool Geometry::relToAbsNumbering(const char* relId, short& absId)
   const short nPhi = 64; // nStripZ * nCellsZInStrip
 
   absId =
-    (relId[0] - 1) * nPhi * nZ + // the offset of PHOS modules
-    (relId[1] - 1) * nZ +        // the offset along phi
-    relId[2];                    // the offset along z
+    relId[0] * nPhi * nZ + // the offset of PHOS modules
+    (relId[1] - 1) * nZ +  // the offset along phi
+    relId[2];              // the offset along z
 
   return true;
 }

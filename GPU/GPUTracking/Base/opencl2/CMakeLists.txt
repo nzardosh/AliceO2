@@ -9,6 +9,7 @@
 # submit itself to any jurisdiction.
 
 set(MODULE GPUTrackingOCL2)
+enable_language(ASM)
 
 if(DEFINED OCL2_GPUTARGET)
   set(TMP_TARGET "(AMDGPU Target ${OCL2_GPUTARGET})")
@@ -25,10 +26,11 @@ set(CL_SRC ${GPUDIR}/Base/opencl-common/GPUReconstructionOCL.cl)
 set(CL_BIN ${CMAKE_CURRENT_BINARY_DIR}/GPUReconstructionOCL2Code)
 
 set(OCL_FLAGS -cl-denorms-are-zero -cl-mad-enable -cl-no-signed-zeros -ferror-limit=1000 -Xclang -finclude-default-header -Dcl_clang_storage_class_specifiers -Wno-invalid-constexpr -Wno-unused-command-line-argument -cl-std=clc++)
-set(OCL_DEFINCL "-D$<JOIN:$<TARGET_PROPERTY:O2::GPUTracking,COMPILE_DEFINITIONS>,$<SEMICOLON>-D>"
+set(OCL_DEFINECL "-D$<JOIN:$<TARGET_PROPERTY:O2::GPUTracking,COMPILE_DEFINITIONS>,$<SEMICOLON>-D>"
             "-I$<JOIN:$<TARGET_PROPERTY:O2::GPUTracking,INCLUDE_DIRECTORIES>,$<SEMICOLON>-I>"
             -I${CMAKE_SOURCE_DIR}/Detectors/TRD/base/src
             -I${CMAKE_SOURCE_DIR}/Detectors/Base/src
+            -I${CMAKE_SOURCE_DIR}/DataFormats/Reconstruction/src
             -I${CMAKE_SOURCE_DIR}/Detectors/ITSMFT/ITS/tracking/cuda/include
             -DGPUCA_GPULIBRARY=OCL2
             -D__OPENCLCPP__
@@ -47,7 +49,7 @@ if(OPENCL2_ENABLED_AMD) # BUILD OpenCL2 binaries for AMD target
     OUTPUT ${CL_BIN}.amd
     COMMAND ${CLANG_OCL}
             ${OCL_FLAGS}
-            ${OCL_DEFINCL}
+            ${OCL_DEFINECL}
             -mcpu=${OCL2_GPUTARGET}
             -o ${CL_BIN}.amd ${CL_SRC}
     MAIN_DEPENDENCY ${CL_SRC}
@@ -68,7 +70,7 @@ if(OPENCL2_ENABLED_AMD) # BUILD OpenCL2 binaries for AMD target
     ${CMAKE_CURRENT_BINARY_DIR}/GPUReconstructionOCLCode.amd.S
     PROPERTIES
     LANGUAGE
-    CXX
+    ASM
     OBJECT_DEPENDS
     "${CL_BIN}.amd;${GPUDIR}/Standalone/makefiles/include.S")
 
@@ -82,7 +84,7 @@ if(OPENCL2_ENABLED_SPIRV) # BUILD OpenCL2 intermediate code for SPIR-V target
       COMMAND clang
               -emit-llvm --target=spir64-unknown-unknown
               ${OCL_FLAGS}
-              ${OCL_DEFINCL}
+              ${OCL_DEFINECL}
               -o ${CL_BIN}.bc -c ${CL_SRC}
       MAIN_DEPENDENCY ${CL_SRC}
       IMPLICIT_DEPENDS CXX ${CL_SRC}
@@ -108,7 +110,7 @@ if(OPENCL2_ENABLED_SPIRV) # BUILD OpenCL2 intermediate code for SPIR-V target
     ${CMAKE_CURRENT_BINARY_DIR}/GPUReconstructionOCLCode.spirv.S
     PROPERTIES
     LANGUAGE
-    CXX
+    ASM
     OBJECT_DEPENDS
     "${CL_BIN}.spirv;${GPUDIR}/Standalone/makefiles/include.S")
 
@@ -116,11 +118,11 @@ if(OPENCL2_ENABLED_SPIRV) # BUILD OpenCL2 intermediate code for SPIR-V target
 endif()
 
 if(OPENCL2_ENABLED) # BUILD OpenCL2 source code for runtime compilation target
-  # executes clang to create llvm IL code
+  # executes clang to preprocess
   add_custom_command(
       OUTPUT ${CL_BIN}.src
       COMMAND clang
-              ${OCL_DEFINCL}
+              ${OCL_DEFINECL}
               -E ${CL_SRC} > ${CL_BIN}.src
       MAIN_DEPENDENCY ${CL_SRC}
       IMPLICIT_DEPENDS CXX ${CL_SRC}
@@ -140,7 +142,7 @@ if(OPENCL2_ENABLED) # BUILD OpenCL2 source code for runtime compilation target
     ${CMAKE_CURRENT_BINARY_DIR}/GPUReconstructionOCLCode.src.S
     PROPERTIES
     LANGUAGE
-    CXX
+    ASM
     OBJECT_DEPENDS
     "${CL_BIN}.src;${GPUDIR}/Standalone/makefiles/include.S")
 

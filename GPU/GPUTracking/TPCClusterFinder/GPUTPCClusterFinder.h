@@ -18,6 +18,7 @@
 #include "GPUProcessor.h"
 #include "GPUDataTypes.h"
 #include "CfFragment.h"
+#include "TPCPadGainCalib.h"
 
 namespace o2
 {
@@ -28,6 +29,8 @@ namespace dataformats
 {
 template <typename TruthElement>
 class MCTruthContainer;
+template <typename TruthElement>
+class ConstMCTruthContainerView;
 } // namespace dataformats
 
 namespace tpc
@@ -38,13 +41,14 @@ class Digit;
 
 } // namespace o2
 
-namespace GPUCA_NAMESPACE
-{
-namespace gpu
+namespace GPUCA_NAMESPACE::gpu
 {
 struct GPUTPCClusterMCInterim;
+struct TPCPadGainCalib;
 
 struct ChargePos;
+
+class GPUTPCGeometry;
 
 class GPUTPCClusterFinder : public GPUProcessor
 {
@@ -52,6 +56,7 @@ class GPUTPCClusterFinder : public GPUProcessor
   struct Memory {
     struct counters_t {
       size_t nDigits = 0;
+      tpccf::SizeT nDigitsInFragment = 0; // num of digits in fragment can differ from nPositions if ZS is active
       tpccf::SizeT nPositions = 0;
       tpccf::SizeT nPeaks = 0;
       tpccf::SizeT nClusters = 0;
@@ -93,11 +98,15 @@ class GPUTPCClusterFinder : public GPUProcessor
   unsigned char* mPzs = nullptr;
   ZSOffset* mPzsOffsets = nullptr;
   MinMaxCN* mMinMaxCN = nullptr;
+  unsigned char* mPpadHasLostBaseline = nullptr;
   tpc::Digit* mPdigits = nullptr; // input digits, only set if ZS is skipped
   ChargePos* mPpositions = nullptr;
   ChargePos* mPpeakPositions = nullptr;
   ChargePos* mPfilteredPeakPositions = nullptr;
   unsigned char* mPisPeak = nullptr;
+  uint* mPclusterPosInRow = nullptr; // store the index where the corresponding cluster is stored in a bucket.
+                                     // Required when MC are enabled to write the mc data to the correct position.
+                                     // Set to >= mNMaxClusterPerRow if cluster was discarded.
   ushort* mPchargeMap = nullptr;
   unsigned char* mPpeakMap = nullptr;
   uint* mPindexMap = nullptr;
@@ -107,9 +116,10 @@ class GPUTPCClusterFinder : public GPUProcessor
   int* mPbuf = nullptr;
   Memory* mPmemory = nullptr;
 
-  o2::dataformats::MCTruthContainer<o2::MCCompLabel> const* mPinputLabels = nullptr;
-  uint* mPlabelHeaderOffset = nullptr;
-  uint* mPlabelDataOffset = nullptr;
+  o2::dataformats::ConstMCTruthContainerView<o2::MCCompLabel> const* mPinputLabels = nullptr;
+  uint* mPlabelsInRow = nullptr;
+  uint mPlabelsHeaderGlobalOffset = 0;
+  uint mPlabelsDataGlobalOffset = 0;
 
   int mISlice = 0;
   constexpr static int mScanWorkGroupSize = GPUCA_THREAD_COUNT_SCAN;
@@ -123,9 +133,12 @@ class GPUTPCClusterFinder : public GPUProcessor
   unsigned int mNBufs = 0;
 
   short mMemoryId = -1;
+  short mScratchId = -1;
   short mZSId = -1;
   short mZSOffsetId = -1;
   short mOutputId = -1;
+
+  GPUdi() const GPUTPCGeometry* getGeometry() const;
 
 #ifndef GPUCA_GPUCODE
   void DumpDigits(std::ostream& out);
@@ -139,7 +152,6 @@ class GPUTPCClusterFinder : public GPUProcessor
 #endif
 };
 
-} // namespace gpu
-} // namespace GPUCA_NAMESPACE
+} // namespace GPUCA_NAMESPACE::gpu
 
 #endif

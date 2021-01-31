@@ -31,6 +31,7 @@ o2_add_executable(digitizer-workflow
                           src/TOFDigitizerSpec.cxx
                   PUBLIC_LINK_LIBRARIES O2::Framework
                                         O2::Steer
+                                        O2::CommonConstants
                                         O2::EMCALSimulation
                                         O2::FT0Simulation
                                         O2::FV0Simulation
@@ -54,3 +55,12 @@ o2_add_executable(digitizer-workflow
                                         O2::TRDWorkflow
                                         O2::DataFormatsTRD
                                         O2::ZDCSimulation)
+
+
+o2_add_executable(mctruth-testworkflow
+                  COMPONENT_NAME sim
+                  SOURCES src/MCTruthTestWorkflow.cxx
+		          src/MCTruthSourceSpec.cxx
+	                  src/MCTruthWriterSpec.cxx
+                  PUBLIC_LINK_LIBRARIES O2::Framework
+                                        O2::SimulationDataFormat)

@@ -24,6 +24,7 @@
 using namespace GPUCA_NAMESPACE::gpu;
 using namespace GPUCA_NAMESPACE::gpu::tpccf;
 using namespace o2::tpc;
+using namespace o2::tpc::constants;
 
 template <>
 GPUdii() void GPUTPCCFDecodeZS::Thread<GPUTPCCFDecodeZS::decodeZS>(int nBlocks, int nThreads, int iBlock, int iThread, GPUSharedMemory& smem, processorType& clusterer, int firstHBF)
@@ -87,7 +88,7 @@ GPUdii() void GPUTPCCFDecodeZS::decode(GPUTPCClusterFinder& clusterer, GPUShared
       const unsigned int decodeBits = decode12bit ? TPCZSHDR::TPC_ZS_NBITS_V2 : TPCZSHDR::TPC_ZS_NBITS_V1;
       const float decodeBitsFactor = 1.f / (1 << (decodeBits - 10));
       unsigned int mask = (1 << decodeBits) - 1;
-      int timeBin = (hdr->timeOffset + (GPURawDataUtils::getOrbit(rdh) - firstHBF) * o2::constants::lhc::LHCMaxBunches) / Constants::LHCBCPERTIMEBIN;
+      int timeBin = (hdr->timeOffset + (GPURawDataUtils::getOrbit(rdh) - firstHBF) * o2::constants::lhc::LHCMaxBunches) / LHCBCPERTIMEBIN;
       const int rowOffset = s.regionStartRow + ((endpoint & 1) ? (s.nRowsRegion / 2) : 0);
       const int nRows = (endpoint & 1) ? (s.nRowsRegion - s.nRowsRegion / 2) : (s.nRowsRegion / 2);
 
@@ -164,11 +165,15 @@ GPUdii() void GPUTPCCFDecodeZS::decode(GPUTPCClusterFinder& clusterer, GPUShared
                   const CfFragment& fragment = clusterer.mPmemory->fragment;
                   TPCTime globalTime = timeBin + l;
                   bool inFragment = fragment.contains(globalTime);
-                  ChargePos pos(Row(rowOffset + m), Pad(pad++), inFragment ? fragment.toLocal(globalTime) : INVALID_TIME_BIN);
+                  Row row = rowOffset + m;
+                  ChargePos pos(row, Pad(pad), inFragment ? fragment.toLocal(globalTime) : INVALID_TIME_BIN);
                   positions[nDigitsTmp++] = pos;
                   if (inFragment) {
-                    chargeMap[pos] = PackedCharge(float(byte & mask) * decodeBitsFactor);
+                    float q = float(byte & mask) * decodeBitsFactor;
+                    q *= clusterer.GetConstantMem()->calibObjects.tpcPadGain->getGainCorrection(slice, row, pad);
+                    chargeMap[pos] = PackedCharge(q);
                   }
+                  pad++;
                   byte = byte >> decodeBits;
                   bits -= decodeBits;
                   seqLen--;
